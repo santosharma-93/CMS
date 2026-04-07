@@ -153,7 +153,7 @@ namespace CMS.Controllers
             var userRole = User.FindFirstValue(ClaimTypes.Role);
 
             var complaints = await _context.Complaints
-                .Find(c => userRole == "Helpdesk" ? c.RegisteredById == userMobile : c.UserId == userMobile) // Helpdesk sees self-registered
+                .Find(c => userRole == "Helpdesk" ? true : c.UserId == userMobile) // Helpdesk sees all, Citizen sees self
                 .SortByDescending(c => c.CreatedDate)
                 .ToListAsync();
 
@@ -174,10 +174,11 @@ namespace CMS.Controllers
 
             if (userRole == "Helpdesk")
             {
+                ViewBag.Users = await _context.Users.Find(_ => true).ToListAsync();
                 ViewBag.Heads = await _context.Users.Find(u => u.Role == "DeptHead").ToListAsync();
                 var masters = await _context.Masters.Find(_ => true).FirstOrDefaultAsync() ?? new Master();
                 ViewBag.Masters = masters;
-                ViewBag.AllDepartments = masters.Departments.Select(d => d.Name).ToList();
+                ViewBag.AllDepartments = masters.Departments.Select(d => new CMS.Models.DepartmentBrief { Name = d.Name, Code = d.Code }).ToList();
                 return View("HelpdeskDashboard", complaints);
             }
 

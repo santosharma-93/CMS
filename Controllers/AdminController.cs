@@ -59,7 +59,7 @@ namespace CMS.Controllers
             ViewBag.AvgResolutionTime = avgTime.ToString("F1") + "d";
             
             var master = await _context.Masters.Find(_ => true).FirstOrDefaultAsync();
-            ViewBag.AllDepartments = master?.Departments.Select(d => d.Name).ToList() ?? new List<string>();
+            ViewBag.AllDepartments = master?.Departments.Select(d => new CMS.Models.DepartmentBrief { Name = d.Name, Code = d.Code }).ToList();
 
             var ratedComplaints = complaints.Where(c => c.Rating > 0).ToList();
             double avgRating = ratedComplaints.Any() ? ratedComplaints.Average(c => c.Rating) : 0;

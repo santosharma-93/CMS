@@ -57,4 +57,10 @@ namespace CMS.Models
         public string DivisionName { get; set; } = string.Empty;
         public string Status { get; set; } = "Active";
     }
+
+    public class DepartmentBrief
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+    }
 }

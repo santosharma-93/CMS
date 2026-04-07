@@ -350,6 +350,9 @@
     <div class="nav-item" onclick="showPanel('analytics')" id="nav-analytics">
       <span class="icon">📈</span><span>Analytics</span>
     </div>
+    <div class="nav-item" onclick="showPanel('reports')" id="nav-reports">
+      <span class="icon">📋</span><span>Reports</span>
+    </div>
     <div style="display:none;" class="nav-item" onclick="showPanel('sla')" id="nav-sla">
         <span class="icon">⏱️</span><span>SLA Monitor</span>
     <span class="nav-badge amber">@slas</span>
@@ -512,8 +515,8 @@
               <select id="filterDept">
                   <option value="">All Departments</option>
                   @if(ViewBag.AllDepartments != null) {
-                      foreach(var d in (List<string>)ViewBag.AllDepartments) {
-                          <option>@d</option>
+                      foreach(var d in (List<CMS.Models.DepartmentBrief>)ViewBag.AllDepartments) {
+                          <option value="@d.Code">@d.Name</option>
                       }
                   }
               </select>
@@ -527,11 +530,8 @@
               </select>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label>Date Range</label>
-                <div class="search-bar">
-                    <span class="icon">📅</span>
-                    <input type="text" id="filterDateRange" placeholder="Select Range" readonly style="cursor:pointer; background:#fff;">
-                </div>
+                <label>📅 Date Range</label>
+                <input type="text" id="filterDateRange" placeholder="Select Range" readonly style="width:100%;height:38px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:white;cursor:pointer;">
             </div>
             <button class="btn btn-primary" onclick="applyFilters()" style="margin-top:17px; height:38px;">Filter</button>
           </div>
@@ -948,6 +948,98 @@
         </div>
       </div>
     </div>
+
+    <!-- REPORTS PANEL -->
+    <div id="panel-reports" class="panel">
+      <div class="page-hdr">
+        <div class="page-hdr-left">
+          <h2>📊 Reports</h2>
+          <p>Generate and export user-wise or department-wise reports</p>
+        </div>
+        <div class="page-hdr-actions">
+           <button class="btn btn-green btn-sm" onclick="downloadReportPDF()"><span class="icon">⬇</span> Download PDF</button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-body" style="padding:16px;">
+          <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:12px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;margin-bottom:4px;display:block;">Department</label>
+                <select id="repDept" class="form-control" onchange="cascadeRepDiv(this)" style="width:100%;height:38px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:12px;">
+                    <option value="">All Departments</option>
+                    @foreach(var d in ViewBag.AllDepartments) {
+                        <option value="@d.Code">@d.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;margin-bottom:4px;display:block;">Division</label>
+                <select id="repDiv" class="form-control" onchange="cascadeRepSub(this)" style="width:100%;height:38px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:12px;">
+                    <option value="">All Divisions</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;margin-bottom:4px;display:block;">Sub-Division</label>
+                <select id="repSub" class="form-control" onchange="cascadeRepOff(this)" style="width:100%;height:38px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:12px;">
+                    <option value="">All Sub-Divs</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;margin-bottom:4px;display:block;">Officer/Reg. By</label>
+                <select id="repOff" class="form-control" onchange="renderReportTable()" style="width:100%;height:38px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:12px;">
+                    <option value="">All Officers</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;margin-bottom:4px;display:block;">Date Range</label>
+              <div class="search-bar">
+                <input type="text" placeholder="Select Date Range" id="reportDateRange" class="form-control" style="width:100%;height:38px;padding:8px;padding-left:36px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:white;" readonly>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:12px;align-items:center;">
+             <input type="text" id="reportSearch" placeholder="🔍 Search by ticket, name, mobile, title..." oninput="filterReportTable()" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;">
+             <select id="reportStatus" onchange="renderReportTable()" style="width:140px;height:38px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:12px;">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Assigned">Assigned</option>
+                <option value="Resolved">Resolved</option>
+             </select>
+             <button class="btn btn-outline" onclick="resetReportFilters()" style="height:38px;padding:0 15px;">Reset Filters</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Table -->
+      <div id="reportExportArea">
+          <!-- Printing header (hidden in UI) -->
+          <div class="print-only-header" style="display:none;margin-bottom:25px;text-align:center;">
+              <h1 style="font-family:'Rajdhani',sans-serif;font-size:24px;margin-bottom:5px;">Detailed Progress Report</h1>
+              <p style="font-size:12px;color:#64748b;" id="printReportMeta"></p>
+              <hr style="border:none;border-bottom:2px solid #0f172a;margin-top:10px;">
+          </div>
+          
+          <div class="card">
+            <div class="card-body no-pad">
+              <table class="data-table" id="reportTable">
+                <thead id="reportTableHead">
+                    <!-- Dynamic -->
+                </thead>
+                <tbody id="reportTableBody">
+                    <!-- Dynamic -->
+                </tbody>
+              </table>
+              <div id="reportEmptyState" style="display:none;text-align:center;padding:60px;">
+                  <div style="font-size:40px;margin-bottom:10px;">📉</div>
+                  <div style="font-weight:700;color:var(--navy);">No data found for the selected filters</div>
+                  <p style="color:var(--text-light);font-size:13px;">Try adjusting your date range or status filter</p>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
     <div id="panel-sla" class="panel">
         <div class="page-hdr"><h2>⏱️ SLA Monitor</h2></div>
         <div class="card"><div class="card-body"><p class="text-muted">Resolution tracking active.</p></div></div>
@@ -1219,6 +1311,7 @@
 <script src="/lib/select2/js/select2.min.js"></script>
 <script src="/lib/moment/moment.min.js"></script>
 <script src="/lib/daterangepicker/daterangepicker.min.js"></script>
+<script src="/lib/html2pdf/html2pdf.bundle.min.js"></script>
 <script src="/lib/chart.js/chart.min.js"></script>
 <script>
   const masters = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(masters));
@@ -2095,7 +2188,207 @@
       if (hash) {
           showPanel(hash);
       }
+
+      // -- Detailed Reports Initializer --
+      $('#reportDateRange').daterangepicker({
+          opens: 'left',
+          autoUpdateInput: false,
+          locale: { cancelLabel: 'Clear', format: 'DD/MM/YYYY' },
+          ranges: {
+             'Today': [moment(), moment()],
+             'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+             'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+             'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+             'This Month': [moment().startOf('month'), moment().endOf('month')]
+          }
+      });
+
+      $('#reportDateRange').on('apply.daterangepicker', function(ev, picker) {
+          $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+          renderReportTable();
+      });
+
+      $('#reportDateRange').on('cancel.daterangepicker', function(ev, picker) {
+          $(this).val('');
+          renderReportTable();
+      });
+
+      renderReportTable();
   });
+
+  // ========== REPORTS LOGIC (FLAT LIST) ==========
+  const allUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Users));
+  const userMap = {};
+  allUsers.forEach(u => { userMap[u.MobileNo] = u.FullName; });
+
+  const allComplaintsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
+
+  function cascadeRepDiv(el) {
+    const deptCode = $(el).val();
+    const deptName = (masters.Departments.find(d => d.Code === deptCode) || {}).Name;
+    const divSel = $('#repDiv').html('<option value="">All Divisions</option>');
+    $('#repSub').html('<option value="">All Sub-Divs</option>');
+    $('#repOff').html('<option value="">All Officers</option>');
+
+    if (deptName) {
+        const filtered = (masters.Divisions || []).filter(d => d.DepartmentName === deptName);
+        filtered.forEach(d => divSel.append(`<option value="${d.Name}">${d.Name}</option>`));
+        
+        // Also populate officers for this dept code
+        const matchingOffs = (officers || []).filter(o => o.Department && o.Department.includes(deptCode));
+        matchingOffs.forEach(o => $('#repOff').append(`<option value="${o.MobileNo}">${o.FullName}</option>`));
+    }
+    renderReportTable();
+  }
+
+  function cascadeRepSub(el) {
+    const deptCode = $('#repDept').val();
+    const deptName = (masters.Departments.find(d => d.Code === deptCode) || {}).Name;
+    const div = $(el).val();
+    const subSel = $('#repSub').html('<option value="">All Sub-Divs</option>');
+    $('#repOff').html('<option value="">All Officers</option>');
+
+    if (div) {
+        const filtered = (masters.SubDivisions || []).filter(s => s.DepartmentName === deptName && s.DivisionName === div);
+        filtered.forEach(s => subSel.append(`<option value="${s.Name}">${s.Name}</option>`));
+
+        const matchingOffs = (officers || []).filter(o => o.Department === deptCode && o.Division === div);
+        matchingOffs.forEach(o => $('#repOff').append(`<option value="${o.MobileNo}">${o.FullName}</option>`));
+    }
+    renderReportTable();
+  }
+
+  function cascadeRepOff(el) {
+    const deptCode = $('#repDept').val();
+    const div = $('#repDiv').val();
+    const sub = $(el).val();
+    const offSel = $('#repOff').html('<option value="">All Officers</option>');
+
+    if (sub) {
+        const matchingOffs = (officers || []).filter(o => o.Department === deptCode && o.Division === div && o.SubDivision === sub);
+        matchingOffs.forEach(o => offSel.append(`<option value="${o.MobileNo}">${o.FullName}</option>`));
+    }
+    renderReportTable();
+  }
+
+  function renderReportTable() {
+      const dateVal = $('#reportDateRange').val();
+      const drp = $('#reportDateRange').data('daterangepicker');
+      const start = (dateVal && drp) ? drp.startDate.startOf('day') : null;
+      const end = (dateVal && drp) ? drp.endDate.endOf('day') : null;
+      const statusFilter = $('#reportStatus').val();
+      
+      const selDept = $('#repDept').val();
+      const selDiv = $('#repDiv').val();
+      const selSub = $('#repSub').val();
+      const selOff = $('#repOff').val();
+
+      // 1. Filter raw data
+      let filtered = (allComplaintsData || []).filter(c => {
+          let match = true;
+          const cDate = moment(c.CreatedDate);
+          if (start && end && (cDate.isBefore(start) || cDate.isAfter(end))) match = false;
+          if (statusFilter && c.Status !== statusFilter) match = false;
+          
+          if (selDept && c.Department !== selDept) match = false;
+          // Note: In some schemas Division/SubDiv might be optional or in different fields, 
+          // but we apply them if present in the model or via AssignedToId/User lookup
+          // For now, filtering by AssignedTo/Helpdesk if an officer is selected
+          if (selOff) {
+              if (c.AssignedToId !== selOff && c.RegisteredById !== selOff) match = false;
+          }
+          
+          return match;
+      });
+
+      const head = $('#reportTableHead');
+      const body = $('#reportTableBody');
+      head.empty();
+      body.empty();
+
+      if (filtered.length === 0) {
+          $('#reportEmptyState').show();
+          $('#reportTable').hide();
+          return;
+      }
+      $('#reportEmptyState').hide();
+      $('#reportTable').show();
+
+      head.append(`<tr>
+          <th>#</th>
+          <th>Ack No</th>
+          <th>Citizen</th>
+          <th>Mobile</th>
+          <th>Title / Issue</th>
+          <th>Department</th>
+          <th>Registered By</th>
+          <th>Status</th>
+          <th>Assigned To</th>
+          <th>Date</th>
+      </tr>`);
+
+      filtered.forEach((c, idx) => {
+          const regBy = userMap[c.RegisteredById] || c.RegisteredById || "Self";
+          body.append(`<tr>
+              <td style="font-size:11px;color:#94a3b8;">${idx + 1}</td>
+              <td style="font-weight:700;">${c.ComplaintNo}</td>
+              <td>${c.FullName || 'N/A'}</td>
+              <td style="font-size:11px;">${c.UserId}</td>
+              <td>${c.ComplaintTitle}</td>
+              <td><span class="pill pill-blue">${c.Department}</span></td>
+              <td><div style="font-size:12px;font-weight:600;">${regBy}</div></td>
+              <td><span class="pill pill-${c.Status === 'Resolved' ? 'green' : (c.Status === 'Assigned' ? 'blue' : 'amber')}">${c.Status}</span></td>
+              <td><div style="font-size:11px;">${c.AssignedToName || 'Not Assigned'}</div></td>
+              <td style="font-size:11px;">${moment(c.CreatedDate).format('DD MMM YY')}</td>
+          </tr>`);
+      });
+
+      filterReportTable(); // re-apply search if any
+  }
+
+  function filterReportTable() {
+      const search = $('#reportSearch').val().toLowerCase().trim();
+      let visible = 0;
+      $('#reportTableBody tr').each(function() {
+          const text = $(this).text().toLowerCase();
+          const show = !search || text.includes(search);
+          $(this).toggle(show);
+          if (show) visible++;
+      });
+      if (visible === 0) $('#reportEmptyState').show();
+      else $('#reportEmptyState').hide();
+  }
+
+  function resetReportFilters() {
+      $('#repDept, #repDiv, #repSub, #repOff').val('');
+      $('#repDiv, #repSub, #repOff').html('<option value="">All ...</option>'); // reset content
+      $('#reportDateRange').val('');
+      $('#reportSearch').val('');
+      $('#reportStatus').val('');
+      renderReportTable();
+  }
+
+  function downloadReportPDF() {
+      const element = document.getElementById('reportExportArea');
+      const dateStr = $('#reportDateRange').val() || 'All Time';
+      const deptStr = $('#repDept').val() || 'All Departments';
+      
+      // Update print meta
+      $('#printReportMeta').text(`Detailed Complaint Report | Dept: ${deptStr} | Range: ${dateStr} | Generated: ${moment().format('DD MMM YYYY, HH:mm')}`);
+      $('.print-only-header').show();
+      
+      const opt = {
+          margin: 10,
+          filename: `CCMS_Detailed_Report_${moment().format('YYYYMMDD')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+          $('.print-only-header').hide();
+      });
+  }
 </script>
 
 </body>
