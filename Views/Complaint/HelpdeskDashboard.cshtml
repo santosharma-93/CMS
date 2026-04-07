@@ -227,6 +227,11 @@
       <span class="icon">🔍</span><span>Track a Ticket</span>
     </a>
     
+    <div class="sidebar-section-label">Master Data</div>
+    <a href="#officer-details" class="nav-item" onclick="showPanel('officer-details')" id="nav-officer-details">
+      <span class="icon">📋</span><span>Officer Directory</span>
+    </a>
+    
     <div class="sidebar-section-label">Actions</div>
     <a href="/Complaint/DirectSubmit" class="nav-item">
       <span class="icon">➕</span><span>Register Complaint</span>
@@ -480,6 +485,83 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════
+         PANEL: OFFICER DETAILS
+    ══════════════════════════════════ -->
+    <div id="panel-officer-details" class="panel">
+      <div class="page-hdr">
+        <div class="page-hdr-left">
+          <h2>📋 Officer Directory</h2>
+          <p>Search, filter, and view officer contact profiles</p>
+        </div>
+      </div>
+
+      <!-- FILTER BAR -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-body" style="padding:14px 18px;">
+          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;color:var(--text-mid);">Search</label>
+              <div class="search-bar">
+                <span class="icon">🔍</span>
+                <input type="text" id="oFilter_search" placeholder="Name, phone, designation..." oninput="filterOfficerDetails()" style="width:100%;padding:9px 12px 9px 32px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;color:var(--text-mid);">Department</label>
+              <select id="oFilter_dept" onchange="filterOfficerDetails()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:white;">
+                <option value="">All Departments</option>
+                @if(masters != null && masters.Departments != null) {
+                    @foreach(var dept in masters.Departments) { <option value="@dept.Name">@dept.Name</option> }
+                }
+              </select>
+            </div>
+            <button class="btn btn-outline" onclick="clearOfficerFilters()" style="white-space:nowrap;margin-top:auto;">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA TABLE -->
+      <div class="card">
+        <div class="card-hdr">
+          <h3>Officer Profiles <span id="officerCount" style="font-size:13px;font-weight:400;color:var(--text-light);">(Showing @officers.Count())</span></h3>
+        </div>
+        <div class="card-body no-pad">
+          <table class="data-table" id="officerDetailsTable">
+            <thead><tr><th>Officer Name</th><th>Contact Info</th><th>Department</th><th>Designation</th><th>Status</th></tr></thead>
+            <tbody id="officerDetailsBody">
+              @foreach (var off in officers)
+              {
+                var deptString = off.Department != null ? string.Join(", ", off.Department) : "";
+                <tr class="officer-detail-row"
+                    data-search="@($"{off.FullName} {off.MobileNo} {off.Email} {off.Designation} {off.AreaOfJurisdiction}")"
+                    data-dept="@deptString">
+                    <td>
+                        <strong>@off.FullName</strong>
+                        @if(!string.IsNullOrEmpty(off.AreaOfJurisdiction)) { 
+                            <div style="font-size:11px;color:var(--text-light);margin-top:4px;">📍 @off.AreaOfJurisdiction</div> 
+                        }
+                    </td>
+                    <td>
+                        <div>📞 @off.MobileNo</div>
+                        @if(!string.IsNullOrEmpty(off.Email)) { <div style="font-size:11px;color:var(--text-light);">✉️ @off.Email</div> }
+                    </td>
+                    <td><span class="pill pill-blue">@deptString</span></td>
+                    <td>@off.Designation</td>
+                    <td><span class="pill pill-green">Active</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <div id="noOfficerResultsMsg" style="display:none;text-align:center;padding:40px;color:var(--text-light);">
+            <div style="font-size:32px;margin-bottom:10px;">🔍</div>
+            <div style="font-weight:600;">No officers match your filters.</div>
+            <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="clearOfficerFilters()">Clear Filters</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -699,6 +781,39 @@
 
   const mastersData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(masters));
   const officersList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(officers));
+
+  // ── Officer Details Filters ──
+  function filterOfficerDetails() {
+      const search = (document.getElementById('oFilter_search').value || '').toLowerCase().trim();
+      const dept   = (document.getElementById('oFilter_dept').value || '');
+
+      const rows = document.querySelectorAll('#officerDetailsBody .officer-detail-row');
+      let visible = 0;
+
+      rows.forEach(row => {
+          const rowSearch = (row.dataset.search || '').toLowerCase();
+          const rowDept   = (row.dataset.dept || '');
+
+          const matchSearch = !search || rowSearch.includes(search);
+          const matchDept   = !dept   || rowDept.includes(dept);
+
+          const show = matchSearch && matchDept;
+          row.style.display = show ? '' : 'none';
+          if (show) visible++;
+      });
+
+      const countLbl = document.getElementById('officerCount');
+      if (countLbl) countLbl.innerText = `(Showing ${visible} of ${rows.length})`;
+      
+      const msg = document.getElementById('noOfficerResultsMsg');
+      if (msg) msg.style.display = (visible === 0) ? 'block' : 'none';
+  }
+
+  function clearOfficerFilters() {
+      document.getElementById('oFilter_search').value = '';
+      document.getElementById('oFilter_dept').value   = '';
+      filterOfficerDetails();
+  }
 
   function cascadeDiv(el) {
       const row = $(el).closest('.assign-flow');
